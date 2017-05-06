@@ -20,7 +20,6 @@ router.get('/', function (req, res, next) {
     }
 });
 
-
 router.route('/logout')
     .get(function (req, res, next) {
         req.session.userinfo = null;
@@ -198,107 +197,7 @@ router.route('/sendmail')
     );
 
 
-function sendMail(recipients, subject, content, mailType, callback) {
-    var mailType = mailType || 'text';
 
-    // create reusable transporter object using the default SMTP transport
-    var transporter = nodemailer.createTransport(credentials.stmp.stmpSecert);
-
-    // setup e-mail data with unicode symbols
-    var mailOptions = {
-        from: '"Jams" <chen86860@yeah.net', // sender address
-        to: recipients, // list of receivers
-        subject: subject // Subject line
-        // mailType: content // plaintext body
-    };
-    mailOptions[mailType] = content;
-
-    // send mail with defined transport object
-    transporter.sendMail(mailOptions, function (error, info) {
-        var status = '';
-        var details = '';
-        if (error) {
-            status = 'err';
-            details = (typeof (info) != 'undefined') ? info : 'Mail Server Refuse'
-        }
-        else {
-            status = 'ok';
-            details = (typeof (info) != 'undefined') ? info : 'Mail Server Refuse'
-        }
-
-        if (callback && typeof (callback) == 'function') {
-            callback(status, details);
-        }
-    });
-}
-
-//
-// //online user
-// var onlineUsers = {};
-// //online user count
-// var onlineCount = 0;
-//
-// //init socket.io
-// var io = require('socket.io').listen(server);
-//
-// io.on('connect', function (socket) {
-//     console.log('a user connected');
-//
-//     //创建事件监听
-//     socket.on('login', function (msg) {
-//         //标识用户的唯一id
-//         socket.name = msg.userId_;
-//         if (!onlineUsers.hasOwnProperty(msg.userId_)) {
-//             onlineUsers[msg.userId_] = msg.username;
-//             onlineCount++;
-//         }
-//
-//         io.emit('chat message', {
-//                 onlineUsers: onlineUsers,
-//                 onlineCount: onlineCount,
-//                 user: msg
-//             }
-//         );
-//
-//         io.emit('chat message', msg);
-//     });
-//
-//     //监听用户退出
-//     socket.on('discount', function () {
-//         //将退出的用户从在线列表删除
-//         if (onlineUsers.hasOwnProperty(socket.name)) {
-//             var obj = {
-//                 userid_: socket.name,
-//                 username: onlineUsers[socket.name]
-//             };
-//
-//             //删除
-//             delete onlineUsers[socket.name];
-//
-//             //在线人数减一
-//             onlineCount--;
-//
-//             //向所有用户广播用户退出
-//             io.emit('logout', {
-//                 onlineUsers: onlineUsers,
-//                 onlineCount: onlineCount,
-//                 user: obj
-//             });
-//         }
-//
-//
-//     });
-//
-//     socket.on('message', function (obj) {
-//         //向所有用户广播信息
-//         io.emit('message', obj);
-//         console.log(obj.username + 'say:' + obj.content);
-//     })
-// });
-
-// io.on('connect', function (socket) {
-//     socket.broadcast.emit('hi');
-// });
 
 
 module.exports = router;
