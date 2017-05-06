@@ -3,10 +3,10 @@ var router = express.Router();
 
 var credentials = require('../lib/credentials');
 var nodemailer = require('nodemailer');
-var md5 = require('../node_modules/md5');
+var md5 = require('md5');
 var uuid = require('uuid');
 var ip = require('ip');
-var userDoc = require('../models/mongonDb').userDoc;
+var Model = require('../models/model');
 
 
 /* GET users listing. */
@@ -40,69 +40,29 @@ router.route('/signup')
         if (req.session.userinfo) {
             res.redirect('/')
         } else {
-            var xhrflag = false;
-            if (req.xhr) {
-                xhrflag = true;
-            }
-            if (req.body.email.match(/\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*/)) {
-                //或查询
-                // userDoc.find({$or: [{username: req.body.username}, {email: req.body.email}]}, function (err, result) {
-
-                userDoc.find({email: req.body.email}, function (err, result) {
-                    if (err) return console.error(err);
-                    if (result.length > 0) {
-                        if (xhrflag) {
-                            res.send('bad')
-                        } else {
-                            res.render('signup', {
-                                status: "bad",
-                                details: "The email address is exist.please try another one!"
-                            });
-                        }
-                    }
-                    else {
-                        var uid = uuid.v4();
-                        var myDate = new Date();
-                        var newuser = new userDoc({
-                            uid: uid,
-                            password: md5(req.body.password + req.body.email),
-                            email: req.body.email,
-                            createTime: myDate.toLocaleDateString(),
-                            createReginIP: ip.address()
-
-                        });
-                        //增加数据
-                        newuser.save(function (err, newuser) {
-                            if (err) return console.error(err);
-                            else {
-                                if (xhrflag) {
-                                    res.send('ok');
-                                }
-                                else {
-                                    res.render('signup', {
-                                        status: 'OK',
-                                        details: "signup is OK,enjoy please :D"
-                                    })
-                                }
-                                req.session.userinfo = {
-                                    username: "",
-                                    uid: uid,
-                                    email: req.body.email
-                                }
-                            }
+            if (req.body && req.body.username.length > 4 && req.body.password.length > 4 && req.body.email.match(/\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*/)) {
+                Model.adminReg(req.body, (err, result) => {
+                    if (err) {
+                        res.render('signup', {
+                            code: 100,
+                            msg: '网络错误'
+                        })
+                    } else if (result.code == 0) {
+                        res.session.username = username
+                        res.redirect('/reg-succeed')
+                    } else {
+                        res.render('signup', {
+                            code: 100,
+                            msg: '用户已存在'
                         })
                     }
                 })
             }
             else {
-                if (xhrflag) {
-                    res.send('bad');
-                } else {
-                    res.render('signup', {
-                        status: "BAD",
-                        details: "email address is invalid"
-                    })
-                }
+                res.render('signup', {
+                    status: "BAD",
+                    details: "email address is invalid"
+                })
             }
         }
     });
@@ -115,29 +75,26 @@ router.route('/login')
     .post(function (req, res, next) {
         var user = {
             username: req.body.username,
-            password: md5(req.body.password)
+            password: md5(req.body.password + req.body.username)
         };
         //查询数据
-        userDoc.find(user, function (err, result) {
-            if (err) return console.error(err); else {
-                if (result[0] && (md5(req.body.password) == result[0].password)) {
-                    result[0].password = "*";
-                    // req.session=result[0];
-                    req.session.userinfo = result[0];
-                    res.send('ok');
-                } else {
-                    res.send('bad');
-                }
+        Model.adminLogin(user, (err, result) => {
+            if (err) {
+                res.render('login', {
+                    mag: '网络错误'
+                })
+            } else if (res.code === 0) {
+                // 登录成功！
+                res.session.userinfo.username = user.username
+                res.session.userinfo.email = result.email
+                res.redirect('/')
+            } else {
+                res.render('login', {
+                    code: 102,
+                    msg: '用户名或密码不正确'
+                })
             }
-        });
-
-        //count计数，返回查询结果
-        // userDoc.count(newuser, function (err, result) {
-        //     if (err) return console.log(err);
-        //     res.render('login', {
-        //         loginstatus: result
-        //     })
-        // })
+        })
     });
 
 router.route('/update')
@@ -198,46 +155,46 @@ router.route('/sendmail')
         }
     })
     .post(function (req, res) {
-            if (req.session.userinfo == null) {
-                res.redirect('/');
-            } else {
-                if (req.body.recipients.match(/\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*/) != null) {
-                    var recipients = req.body.recipients;
-                    var subject = req.body.subject == "" ? "(No Subject)" : req.body.subject;
-                    var content = req.body.content == "" ? "" : req.body.content;
-                    sendMail(recipients, subject, content, 'html', function (status, details) {
-                        if (status == 'err') {
-                            if (req.xhr) {
-                                res.send({
-                                    statusCode: 202,
-                                    details: details
-                                })
-                            } else {
-                                res.render('sendmail', {
-                                    status: "发送失败.",
-                                    details: details
-                                })
-                            }
-                        } else if (status == 'ok') {
-                            if (req.xhr) {
-                                res.send("OK");
-                            } else {
-                                res.render('sendmail', {
-                                    status: '发送成功！',
-                                    details: details
-                                })
-                            }
+        if (req.session.userinfo == null) {
+            res.redirect('/');
+        } else {
+            if (req.body.recipients.match(/\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*/) != null) {
+                var recipients = req.body.recipients;
+                var subject = req.body.subject == "" ? "(No Subject)" : req.body.subject;
+                var content = req.body.content == "" ? "" : req.body.content;
+                sendMail(recipients, subject, content, 'html', function (status, details) {
+                    if (status == 'err') {
+                        if (req.xhr) {
+                            res.send({
+                                statusCode: 202,
+                                details: details
+                            })
+                        } else {
+                            res.render('sendmail', {
+                                status: "发送失败.",
+                                details: details
+                            })
                         }
-                    });
-                }
-                else {
-                    res.render('sendmail', {
-                        status: '邮箱格式不正确哈～',
-                        details: "邮箱格式错误。再检查遍哈～"
-                    })
-                }
+                    } else if (status == 'ok') {
+                        if (req.xhr) {
+                            res.send("OK");
+                        } else {
+                            res.render('sendmail', {
+                                status: '发送成功！',
+                                details: details
+                            })
+                        }
+                    }
+                });
+            }
+            else {
+                res.render('sendmail', {
+                    status: '邮箱格式不正确哈～',
+                    details: "邮箱格式错误。再检查遍哈～"
+                })
             }
         }
+    }
     );
 
 
@@ -262,14 +219,14 @@ function sendMail(recipients, subject, content, mailType, callback) {
         var details = '';
         if (error) {
             status = 'err';
-            details = (typeof(info) != 'undefined') ? info : 'Mail Server Refuse'
+            details = (typeof (info) != 'undefined') ? info : 'Mail Server Refuse'
         }
         else {
             status = 'ok';
-            details = (typeof(info) != 'undefined') ? info : 'Mail Server Refuse'
+            details = (typeof (info) != 'undefined') ? info : 'Mail Server Refuse'
         }
 
-        if (callback && typeof(callback) == 'function') {
+        if (callback && typeof (callback) == 'function') {
             callback(status, details);
         }
     });
