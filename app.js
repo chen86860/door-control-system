@@ -8,11 +8,8 @@ var session = require('express-session');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 
-
 var routes = require('./routes/index');
 var user = require('./routes/user');
-var article = require('./routes/article');
-
 
 var app = express();
 
@@ -40,11 +37,10 @@ app.use(session({
     saveUninitialized: true
 }));
 
-// app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', routes);
 app.use('/user', user);
-app.use('/article', article);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

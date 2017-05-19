@@ -72,28 +72,29 @@ router.route('/login')
         res.render('login');
     })
     .post(function (req, res, next) {
-        var user = {
-            username: req.body.username,
-            password: md5(req.body.password + req.body.username)
-        };
-        //查询数据
-        Model.adminLogin(user, (err, result) => {
-            if (err) {
-                res.render('login', {
-                    mag: '网络错误'
-                })
-            } else if (res.code === 0) {
-                // 登录成功！
-                res.session.userinfo.username = user.username
-                res.session.userinfo.email = result.email
-                res.redirect('/')
-            } else {
-                res.render('login', {
-                    code: 102,
-                    msg: '用户名或密码不正确'
-                })
-            }
-        })
+        console.log('_____________【', req.body,'】')
+        // var user = {
+        //     username: req.body.username,
+        //     password: md5(req.body.password + req.body.username)
+        // };
+        // //查询数据
+        // Model.adminLogin(user, (err, result) => {
+        //     if (err) {
+        //         res.render('login', {
+        //             mag: '网络错误'
+        //         })
+        //     } else if (res.code === 0) {
+        //         // 登录成功！
+        //         res.session.userinfo.username = user.username
+        //         res.session.userinfo.email = result.email
+        //         res.redirect('/')
+        //     } else {
+        //         res.render('login', {
+        //             code: 102,
+        //             msg: '用户名或密码不正确'
+        //         })
+        //     }
+        // })
     });
 
 router.route('/update')

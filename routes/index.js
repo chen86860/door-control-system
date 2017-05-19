@@ -12,7 +12,7 @@ router
 router.get('/chatroom', function (req, res, next) {
     res.render('inde')
 });
-router.route.post('/log', (req, res, next) => {
+router.post('/log', (req, res, next) => {
     let payload = {
         key: req.body.key,
         ipAdd: req.ip,
